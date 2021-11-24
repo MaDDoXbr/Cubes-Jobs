@@ -329,12 +329,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   AllCubes: []
-  Xcount: 200
-  Zcount: 200
+  Xcount: 300
+  Zcount: 300
   Spacing: 1.2
   Speed: 4
   amplitude: 1.5
   period: 16
+  UseJobs: 0
 --- !u!4 &1174780895
 Transform:
   m_ObjectHideFlags: 0
