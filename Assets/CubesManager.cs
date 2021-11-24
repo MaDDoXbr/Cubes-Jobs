@@ -1,52 +1,46 @@
+using System;
+using System.Collections;
 using System.Collections.Generic;
 using Unity.Burst;
+using Unity.Profiling;
 using UnityEngine;
 using UnityEngine.Jobs;
-using Unity.Mathematics;
-using Unity.Profiling;
-
-//https://www.khanacademy.org/computing/computer-programming/programming-natural-simulations/programming-oscillations/a/oscillation-amplitude-and-period
+using UnityEngine.Serialization;
 
 public class CubesManager : MonoBehaviour
 {
     public List<Transform> AllCubes;
-    //private List<Vector3> CubesPositions;
     public int Xcount = 100, Zcount = 100;
     public float Spacing = 1.2f;
-    private Transform[] AllCubesArray;
+    public Transform[] AllCubesArray;
+    private TransformAccessArray transformAccessArray;
 
-    private  TransformAccessArray transformAccessArray;
- 
-    static readonly ProfilerMarker ProfilerWithJobs = new ProfilerMarker(ProfilerCategory.Scripts, "JobsTester.WithJobs");
-    static readonly ProfilerMarker ProfilerNoJobs = new ProfilerMarker(ProfilerCategory.Scripts, "JobsTester.NoJobs");
-    
-    //Fields "Jobifiable"
     public float Speed = 4f;
-    public float amplitude = 2f, period = 4f;
+    public float Amplitude = 2f;
+    public float Period = 16f;
     public bool UseJobs;
+
+    private static readonly ProfilerMarker ProfilerWithJobs =
+        new ProfilerMarker(ProfilerCategory.Scripts, "JobsTester.WithJobs");
+    private static readonly ProfilerMarker ProfilerNoJobs =
+        new ProfilerMarker(ProfilerCategory.Scripts, "JobsTester.NoJobs");    
 
     [BurstCompile]
     public struct MoveCubesJob : IJobParallelForTransform
     {
-        public float realtimeSinceStartup, amplitude, period, Speed;
-      
-        //Será executado 1 vez para cada índice
-        public void Execute(int index, TransformAccess transform) //Versão do Transform pro Jobs System
+        public float realtimeSinceStartup, amplitude, period, speed;
+        public void Execute(int index, TransformAccess transform)
         {
-            //transform.position, rotation, etc
-            //transform.position = NodePos; 
             var c = transform.position;
-            //math.PI,sin tem otimização SIMD, vs mathf.PI,Sin
-            var offset =
-                math.sin(((math.PI * 2) / period) * ((realtimeSinceStartup * Speed) + (c.x + c.z))) *
-                amplitude;
-            transform.position = new Vector3(c.x, offset, c.z);
+            var offset = Mathf.Sin(((Mathf.PI * 2f) / period) * ((realtimeSinceStartup * speed) + (c.x + c.z))) * amplitude;
+            transform.position = new Vector3(c.x, offset, c.z);     
         }
     }
-    
+
     void Start()
     {
-        for (int i = 0; i < Zcount; i++) {
+        for (int i = 0; i < Zcount; i++)
+        {
             for (int j = 0; j < Xcount; j++)
             {
                 var cubeTransf = GameObject.CreatePrimitive(PrimitiveType.Cube).transform;
@@ -56,7 +50,7 @@ public class CubesManager : MonoBehaviour
             }
         }
         AllCubesArray = AllCubes.ToArray();
-        transformAccessArray = new TransformAccessArray(AllCubesArray, 4); //3 worker threads
+        transformAccessArray = new TransformAccessArray(AllCubesArray, 4);
     }
 
     void Update()
@@ -65,19 +59,19 @@ public class CubesManager : MonoBehaviour
         {
             using (ProfilerWithJobs.Auto())
             {
-                // var nodeIndexes = new NativeArray<int>(AllCubes.Count, Allocator.TempJob); //Só 1 frame
-                // var nodes = new NativeList<Vector3>(AllCubes.Count, Allocator.TempJob);
-                var moveCubes = new MoveCubesJob()
+                //1. Criar new Job
+                var moveCubesJob = new MoveCubesJob()
                 {
                     realtimeSinceStartup = Time.realtimeSinceStartup,
-                    amplitude = amplitude,
-                    period = period,
-                    Speed = Speed
+                    amplitude = Amplitude,
+                    period = Period,
+                    speed = Speed
                 };
-                //var transforms = transformAccessArray;
-                var jobHandle = moveCubes.Schedule(transformAccessArray);
+                //2. Criar o JobHandle
+                //var transforms = new TransformAccessArray(AllCubesArray, 4);
+                var jobHandle = moveCubesJob.Schedule(transformAccessArray);
+                //3. Executar o JobHandle (Complete)
                 jobHandle.Complete();
-                //transforms.Dispose();
             }
         }
         else
@@ -88,8 +82,8 @@ public class CubesManager : MonoBehaviour
                 {
                     var c = cube.position;
                     var offset =
-                        Mathf.Sin(((Mathf.PI * 2) / period) * ((Time.realtimeSinceStartup * Speed) + (c.x + c.z))) *
-                        amplitude;
+                        Mathf.Sin(((Mathf.PI * 2f) / Period) * ((Time.realtimeSinceStartup * Speed) + (c.x + c.z))) *
+                        Amplitude;
                     cube.position = new Vector3(c.x, offset, c.z);
                 }
             }
