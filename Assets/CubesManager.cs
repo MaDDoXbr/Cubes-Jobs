@@ -1,8 +1,9 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using Unity.Collections;
 using UnityEngine;
-
+using UnityEngine.Jobs;
 //https://www.khanacademy.org/computing/computer-programming/programming-natural-simulations/programming-oscillations/a/oscillation-amplitude-and-period
 
 public class CubesManager : MonoBehaviour
@@ -13,6 +14,21 @@ public class CubesManager : MonoBehaviour
     public float Speed = 4f;
 
     public float amplitude = 2f, period = 4f;
+
+    public struct MoveCubesJob : IJobParallelForTransform
+    {
+        public float deltaTime;
+        public NativeArray<Vector3> Nodes;
+        public NativeArray<int> enemyNodeIndexes;
+        public NativeList<int> EnemiesToRemove;      
+        public void Execute(int index, TransformAccess transform) //Versão do Transfor no Jobs System
+        {
+
+            //transform.position, etc
+            transform.position =
+                Vector3.MoveTowards(transform.position, Nodes[enemyNodeIndexes[index]], 5f * deltaTime);
+        }
+    }
     
     void Start()
     {
